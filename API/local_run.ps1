@@ -1,0 +1,1 @@
+docker run -it -p 4000:4000 -e PORT=4000 -e APP_URI=$env:APP_URI fraud-api
