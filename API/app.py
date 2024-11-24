@@ -1,30 +1,29 @@
 import mlflow
+from mlflow import MlflowClient
 
 import uvicorn
 import pandas as pd
-import numpy as np
-import joblib
 import boto3
-import os
 
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
+import os
+from pprint import pprint
 
 from pydantic import BaseModel
 from fastapi import FastAPI
 
 # Loading model from MLFlow server.
-mlflow.set_tracking_uri(os.environ["APP_URI"])
-model_name = 'fraud_detection'
-model_alias = 'Production'
-model_uri = f"models:/{model_name}/{model_alias}"
-try:
-    # mlflow.pyfunc.get_model_dependencies(model_uri)
-    model = mlflow.pyfunc.load_model(model_uri)
-    print("Model loaded successfully.")
-except Exception as e:
-    print(f"Error loading model: {e}")
+mlflow.set_tracking_uri(os.environ.get('APP_URI'))
+
+def load_model():
+    # client = MlflowClient()
+
+    # for rm in client.search_registered_models():
+    #     pprint(dict(rm), indent=4)
+    global model
+    model_name = 'fraud-detection'
+    model_alias = 'production'
+    model = mlflow.pyfunc.load_model(f"models:/{model_name}@{model_alias}")
+    print(model)
 
 app = FastAPI(
     title='FraudDetection API',
@@ -91,7 +90,11 @@ class TransactionRecord(BaseModel):
                 }
             ]
         }
-
+        
+@app.on_event("startup")
+async def app_startup():
+    load_model()
+    
 @app.get("/", tags=['Test Endpoint'])
 async def index(): 
     """
@@ -101,19 +104,29 @@ async def index():
 
     return message
 
+@app.get('/reload_model', tags=['Load Endpoint'])
+async def reload_model():
+    """
+    Load last model in production from MLFlow server.
+    """
+    load_model()
+    
+
 @app.post('/predict', tags=['Predict Endpoint'])
 async def predict_fraud(userform: TransactionRecord):
     
     """
     Return a fraud prediction. 
     """
+    global model
     new_data = pd.DataFrame([userform.model_dump()])
     
     # Predict on a Pandas DataFrame.
+    print(model)
     prediction = model.predict(new_data)
     
     return {"prediction": prediction.tolist()[0]}
 
 
 if __name__=="__main__":
-    uvicorn.run(app, host="0.0.0.0", port=4000) # Here you define your web server to run the `app` variable (which contains FastAPI instance), with a specific host IP (0.0.0.0) and port (4000)
+    uvicorn.run(app, host="0.0.0.0", port=4000)
