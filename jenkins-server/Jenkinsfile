@@ -9,6 +9,7 @@ pipeline {
         DOCKERFILE_PATH = "models" // Path to Dockerfile
         EMAIL_RECIPIENT = "renaud.antoine@gmail.com" // Email recipient
         APP_URI = 'https://mlops-mlflow-server-f343fd64a681.herokuapp.com'
+        DATASET_BUCKET='jedhamlopsproject-dataset'
     }
 
     triggers {
