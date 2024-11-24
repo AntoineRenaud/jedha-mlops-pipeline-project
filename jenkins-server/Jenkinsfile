@@ -1,0 +1,89 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "fraud-detection-model-training" // Your Docker image name
+        GIT_REPO = "https://github.com/AntoineRenaud/jedha-mlops-pipeline-project.git" // Git repo URL
+        GIT_BRANCH = "main" // Branch to monitor
+        MONITORED_FILE = "models/app/train.py" // Path to the file to monitor
+        DOCKERFILE_PATH = "models" // Path to Dockerfile
+        EMAIL_RECIPIENT = "renaud.antoine@gmail.com" // Email recipient
+    }
+
+    triggers {
+        pollSCM('H/5 * * * *') // Poll SCM every 5 minutes
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    // Checkout code using GitHub PAT for authentication
+                    checkout([$class: 'GitSCM',
+                              branches: [[name: "${GIT_BRANCH}"]],
+                              userRemoteConfigs: [[
+                                  url: "${GIT_REPO}",
+                                  credentialsId: 'github-access'
+                              ]]
+                    ])
+                }
+            }
+        }
+
+        stage('Check for Changes') {
+            steps {
+                script {
+                    def changes = sh(script: "git diff --name-only HEAD~1 HEAD", returnStdout: true).trim()
+                    if (!changes.contains("${MONITORED_FILE}")) {
+                        echo "No changes detected in ${MONITORED_FILE}. Skipping pipeline."
+                        currentBuild.result = 'ABORTED'
+                        error("No changes detected in the monitored file.")
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh "docker build -t ${DOCKER_IMAGE} ${DOCKERFILE_PATH}"
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                script {
+                    // Using withCredentials to inject AWS credentials into the environment
+                    withCredentials([aws(credentialsId: 'aws-creds', region: 'us-east-1')]) {
+                        sh "docker run --rm -e PORT=4000 -e APP_URI=${APP_URI} -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} -e BACKEND_STORE_URI=${BACKEND_STORE_URI} -e ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI} -e DATASET_BUCKET=${DATASET_BUCKET} fraud-detection-model-training pytest tests/ml_test.py"
+                    }
+                }
+            }
+        }
+
+
+        stage('Run Training') {
+            steps {
+                script {
+                    withCredentials([aws(credentialsId: 'aws-creds', region: 'us-east-1')]) {
+                        sh "docker run --rm -e PORT=4000 -e APP_URI=${APP_URI} -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} -e BACKEND_STORE_URI=${BACKEND_STORE_URI} -e ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI} -e DATASET_BUCKET=${DATASET_BUCKET} fraud-detection-model-training python app/train.py"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            mail to: "${EMAIL_RECIPIENT}",
+                 subject: "Jenkins Pipeline Succeeded",
+                 body: "The Jenkins pipeline completed successfully."
+        }
+        failure {
+            mail to: "${EMAIL_RECIPIENT}",
+                 subject: "Jenkins Pipeline Failed",
+                 body: "The Jenkins pipeline failed. Please check the logs."
+        }
+    }
+}
