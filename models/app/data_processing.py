@@ -2,9 +2,11 @@ import os
 
 import pandas as pd
 
+import boto3
+import io
+
 def processing():
     dateset_url = 'https://lead-program-assets.s3.eu-west-3.amazonaws.com/M05-Projects/fraudTest.csv'
-    filepath = './src/fraudTest.csv'
 
     print("Downloading dataset...")    
     df = pd.read_csv(dateset_url, index_col=0)
@@ -37,10 +39,34 @@ def processing():
     convert_to_string(df, columns_to_convert)
 
     print("...done.") 
-
+    
     print("Exporting cleaned dataset...")
+    
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    DATASET_BUCKET = os.getenv('DATASET_BUCKET')
+    
+    s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    )
+    
+    
+    with io.StringIO() as csv_buffer:
+        df.to_csv(csv_buffer, index=False)
 
-    if not os.path.isdir('src'):
-        os.mkdir('src')
-    df.to_csv('./src/cleaned_dataset.csv', index=False)
-    print("...done.")
+        response = s3_client.put_object(
+            Bucket=DATASET_BUCKET, Key="fraud-detection/cleaned-dataset.csv", Body=csv_buffer.getvalue()
+        )
+
+        status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+
+        if status == 200:
+            print(f"Successful S3 put_object response. Status - {status}")
+        else:
+            print(f"Unsuccessful S3 put_object response. Status - {status}")
+            
+            
+if __name__=="__main__":
+    processing()
