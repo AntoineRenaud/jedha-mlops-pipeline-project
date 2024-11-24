@@ -8,6 +8,7 @@ pipeline {
         MONITORED_FILE = "models/app/train.py" // Path to the file to monitor
         DOCKERFILE_PATH = "models" // Path to Dockerfile
         EMAIL_RECIPIENT = "renaud.antoine@gmail.com" // Email recipient
+        APP_URI = 'https://mlops-mlflow-server-f343fd64a681.herokuapp.com'
     }
 
     triggers {
@@ -51,27 +52,6 @@ pipeline {
             }
         }
 
-
-        // stage('Run Tests') {
-        //     steps {
-        //         script {
-        //             // Using withCredentials to inject AWS credentials into the environment
-        //             withCredentials([aws(credentialsId: 'aws-creds')]) {
-        //                 // No need to pass AWS credentials explicitly as they're injected into the environment
-        //                 sh """
-        //                 docker run --rm \
-        //                 -e PORT=4000 \
-        //                 -e APP_URI=${APP_URI} \
-        //                 -e BACKEND_STORE_URI=${BACKEND_STORE_URI} \
-        //                 -e ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI} \
-        //                 -e DATASET_BUCKET=${DATASET_BUCKET} \
-        //                 fraud-detection-model-training pytest tests/ml_test.py
-        //                 """
-        //             }
-        //         }
-        //     }
-        // }
-
         stage('Run Tests') {
             steps {
                 script {
@@ -82,10 +62,11 @@ pipeline {
                         // Run Docker container with AWS credentials passed as environment variables
                         sh """
                             docker run --rm \
+                            -e APP_URI=${APP_URI} \
                             -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
                             -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-                            -e AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
-                            ${DOCKER_IMAGE} pytest tests/test.py
+                            -e DATASET_BUCKET=${DATASET_BUCKET} \
+                            ${DOCKER_IMAGE} pytest tests/ml_test.py
                         """
                     }
                 }
@@ -100,17 +81,18 @@ pipeline {
                                                       passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                         sh """
                             docker run --rm \
+                            -e APP_URI=${APP_URI} \
                             -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
                             -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-                            -e AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
-                            ${DOCKER_IMAGE} python3 train_model.py
+                            -e DATASET_BUCKET=${DATASET_BUCKET} \
+                            ${DOCKER_IMAGE} python app/train.py
                         """
                     }
                 }
             }
         }
     }
-    
+
     post {
         success {
             mail to: "${EMAIL_RECIPIENT}",
