@@ -99,19 +99,13 @@ if __name__ == "__main__":
     
     artifact_path = "fraud-detection"
     registered_model_name = "fraud-detection"
-
-    # filepath = 'src/cleaned_dataset.csv'
     
-    # param_grid = {
-    # "classifier__max_depth": [1, 3, 6],
-    # "classifier__min_child_weight": [3,5,7,9],
-    # "classifier__n_estimators": [10,20,50],
-    # }
-
     param_grid = {
-    "classifier__max_depth": [1, 6],
+    "classifier__max_depth": [1, 3, 6],
+    "classifier__min_child_weight": [3,5,7,9],
+    "classifier__n_estimators": [10,20,50],
     }
-    
+  
     df = load_data()
     
     print('Preprocessing...')
