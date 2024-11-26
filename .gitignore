@@ -1,3 +1,5 @@
 **/secrets.ps1
 models/app/src/
+airflow-server/logs
+airflow-server/plugins
 **/.env
