@@ -1,3 +1,5 @@
 requests
 pandas
 SQLAlchemy
+evidently==0.4.40
+pydantic==1.10.12
