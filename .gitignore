@@ -3,3 +3,4 @@ models/app/src/
 airflow-server/logs
 airflow-server/plugins
 **/.env
+**/__pycache__/
