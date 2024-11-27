@@ -10,6 +10,8 @@ pipeline {
         EMAIL_RECIPIENT = "renaud.antoine@gmail.com" // Email recipient
         APP_URI = 'https://mlops-mlflow-server-f343fd64a681.herokuapp.com'
         DATASET_BUCKET='jedhamlopsproject-dataset'
+        API_ENDPOINT_RELOADMODEL='https://mlops-api-a1b16d875978.herokuapp.com/reload_model'
+
     }
 
     triggers {
@@ -89,6 +91,19 @@ pipeline {
                             ${DOCKER_IMAGE} python app/train.py
                         """
                     }
+                }
+            }
+        }
+
+        stage('Deploy Model') {
+            steps {
+                script {
+                    sh """
+                        docker run --rm \
+                        -e APP_URI=${APP_URI} \
+                        -e API_ENDPOINT_RELOADMODEL=${API_ENDPOINT_RELOADMODEL} \
+                        ${DOCKER_IMAGE} python app/deploy.py
+                    """
                 }
             }
         }
