@@ -100,17 +100,17 @@ if __name__ == "__main__":
     artifact_path = "fraud-detection"
     registered_model_name = "fraud-detection"
     
-    param_grid = {
-    "classifier__max_depth": [1, 3, 6],
-    "classifier__min_child_weight": [5,7,9],
-    "classifier__n_estimators": [10,20,50],
-    }
-    
     # param_grid = {
-    # "classifier__max_depth": [1, 3],
-    # "classifier__min_child_weight": [1,4],
-    # "classifier__n_estimators": [20,50,100],
+    # "classifier__max_depth": [1, 3, 6],
+    # "classifier__min_child_weight": [5,7,9],
+    # "classifier__n_estimators": [10,20,50],
     # }
+    
+    param_grid = {
+    "classifier__max_depth": [1, 3],
+    "classifier__min_child_weight": [1,4],
+    "classifier__n_estimators": [20,50,100],
+    }
   
     df = load_data()
     
