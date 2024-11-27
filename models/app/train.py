@@ -108,7 +108,7 @@ if __name__ == "__main__":
     
     param_grid = {
     "classifier__max_depth": [1, 3],
-    "classifier__min_child_weight": [1,4]
+    "classifier__min_child_weight": [2,5]
     }
   
     df = load_data()
